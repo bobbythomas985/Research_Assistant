@@ -3,40 +3,92 @@ import gradio as gr
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.llms import Groq
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+from langchain_core.language_models.llms import LLM
+from langchain_core.callbacks import CallbackManagerForLLMRun
+from typing import Optional, List, Dict, Any
 import requests
 from dotenv import load_dotenv
+from groq import Groq
 
 # Load environment variables
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
 
+# Custom wrapper for Groq to make it LangChain compatible
+class GroqWrapper(LLM):
+    client: Any
+    model_name: str = "mixtral-8x7b-32768"
+    temperature: float = 0.7
+    
+    @property
+    def _llm_type(self) -> str:
+        return "groq"
+    
+    def _call(
+        self,
+        prompt: str,
+        stop: Optional[List[str]] = None,
+        run_manager: Optional[CallbackManagerForLLMRun] = None,
+        **kwargs: Any,
+    ) -> str:
+        response = self.client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model=self.model_name,
+            temperature=self.temperature,
+            **kwargs
+        )
+        return response.choices[0].message.content
+
 # Initialize global variables
 vectorstore = None
 qa_chain = None
+groq_llm = None
 
 def upload_pdf(file):
-    global vectorstore, qa_chain
+    global vectorstore, qa_chain, groq_llm
+    
+    try:
+        # Initialize Groq LLM wrapper
+        groq_llm = GroqWrapper(client=Groq(api_key=GROQ_API_KEY))
+        
+        # PDF Text Extraction
+        text = "".join(
+            page.extract_text() or ""
+            for page in PdfReader(file).pages
+        )
+        if not text.strip():
+            return "Error: No readable text found in PDF"
 
-    reader = PdfReader(file.name)
-    raw_text = ""
-    for page in reader.pages:
-        raw_text += page.extract_text() or ""
+        # Text Chunking
+        texts = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        ).split_text(text)
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    texts = text_splitter.split_text(raw_text)
+        # Using HuggingFace embeddings
+        embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-mpnet-base-v2"
+        )
+        
+        vectorstore = FAISS.from_texts(texts, embeddings)
 
-    embeddings = OllamaEmbeddings(model="nomic-embed-text")
-    vectorstore = FAISS.from_texts(texts, embedding=embeddings)
+        # QA System Initialization
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=groq_llm,
+            chain_type="stuff",
+            retriever=vectorstore.as_retriever(),
+            return_source_documents=True
+        )
 
-    llm = Groq(model="mixtral-8x7b-32768", api_key=GROQ_API_KEY)
-    qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=vectorstore.as_retriever(), return_source_documents=True)
+        return "PDF processed successfully!"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
-    return "PDF processed and ready."
+
 
 def ask_question(query):
     if qa_chain is None:
@@ -112,3 +164,4 @@ with demo:
 
 if __name__ == "__main__":
     demo.launch()
+
