@@ -7,3 +7,6 @@ nomic
 requests
 langchain-community
 python-dotenv
+langchain-core
+sentence-transformers
+torch
