@@ -1,0 +1,9 @@
+gradio
+PyPDF2
+langchain
+groq
+faiss-cpu
+nomic
+requests
+langchain-community
+python-dotenv
