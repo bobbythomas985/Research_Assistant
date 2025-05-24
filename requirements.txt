@@ -1,0 +1,10 @@
+groq
+langchain
+langchain-community
+langchain-core
+PyPDF2
+faiss-cpu
+python-dotenv
+requests
+sentence-transformers
+torch
