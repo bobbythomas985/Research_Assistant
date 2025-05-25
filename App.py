@@ -167,24 +167,69 @@ def find_similar_papers():
     return "\n\n".join([f"**{r['title']}**\n{r['abstract']}\nLink: {r['url']}" for r in results])
 
 # Gradio UI
-demo = gr.Blocks()
-with demo:
-    gr.Markdown("# AI Research Assistant")
-    file_upload = gr.File(label="Upload Research Paper (PDF)")
-    upload_btn = gr.Button("Process PDF")
-    status = gr.Textbox(label="Status")
+css = '''
+body, .gradio-container {
+  margin: 0; padding: 0; min-height: 100vh;
+  background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+  color: #eee;
+}
+.header {
+  width: 100%; padding: 20px; text-align: center;
+  font-size: 2.8rem; font-weight: bold;
+  background: linear-gradient(90deg,#ff8a00,#e52e71);
+  -webkit-background-clip: text; color: transparent;
+}
+.content {
+  display: flex; flex-wrap: wrap; padding: 20px;
+  gap: 20px; justify-content: center;
+}
+.sidebar, .main {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px; padding: 20px;
+  backdrop-filter: blur(10px);
+  animation: fadeIn 0.8s ease-in-out;
+  max-height: 70vh; overflow-y: auto;
+  flex: 1 1 300px;
+}
+.footer {
+  display: flex; flex-wrap: wrap; gap: 20px;
+  padding: 15px; justify-content: center;
+}
+button {
+  transition: transform .15s ease-in-out, box-shadow .15s;
+  padding: 10px 20px;
+}
+button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+}
+@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+'''
 
-    with gr.Row():
-        question = gr.Textbox(label="Ask a Question")
-        answer = gr.Textbox(label="Answer", lines=6)
-        citations = gr.Textbox(label="Cited Sources", lines=10)
-        ask_btn = gr.Button("Submit")
+with gr.Blocks(css=css) as demo:
+    gr.Markdown("<div class='header'>🧠 AI Research Assistant</div>")
 
-    summary_btn = gr.Button("Summarize Key Points")
-    summary_output = gr.Textbox(label="Summary", lines=10)
+    with gr.Row(elem_classes=["content"]):
+        with gr.Column(elem_classes=["sidebar"]):
+            gr.Markdown("### Upload & Process PDF")
+            file_upload = gr.File(file_types=['.pdf'], label="Upload PDF")
+            upload_btn  = gr.Button("📂 Process PDF", variant="primary")
+            status      = gr.Textbox(label="Status", interactive=False)
 
-    similar_btn = gr.Button("Find Similar Papers")
-    similar_output = gr.Textbox(label="Similar Papers", lines=10)
+        with gr.Column(elem_classes=["main"]):
+            gr.Markdown("### Ask a Question")
+            question    = gr.Textbox(placeholder="Type your question…", label="Question")
+            ask_btn     = gr.Button("❓ Submit", variant="secondary")
+            answer      = gr.Textbox(label="Answer", lines=6, interactive=False)
+            citations   = gr.Textbox(label="Sources", lines=4, interactive=False)
+
+    with gr.Row(elem_classes=["footer"]):
+        with gr.Column():
+            summary_btn    = gr.Button("✍️ Summarize", variant="primary")
+            summary_output = gr.Textbox(label="Summary", lines=4, interactive=False)
+        with gr.Column():
+            similar_btn    = gr.Button("🔍 Similar Papers", variant="primary")
+            similar_output = gr.Textbox(label="Similar Papers", lines=4, interactive=False)
 
     upload_btn.click(upload_pdf, inputs=file_upload, outputs=status)
     ask_btn.click(ask_question, inputs=question, outputs=[answer, citations])
@@ -193,4 +238,3 @@ with demo:
 
 if __name__ == "__main__":
     demo.launch()
-
