@@ -12,6 +12,8 @@ from typing import Optional, List, Dict, Any
 import requests
 from dotenv import load_dotenv
 from groq import Groq
+import urllib.parse
+import feedparser  # Added for the new function
 
 # Load environment variables
 load_dotenv()
@@ -182,26 +184,51 @@ def summarize_pdf(num_points: int = 6) -> str:
     except Exception as e:
         return f"Error during summarization: {str(e)}"
 
+# *** Modified find_similar_papers function ONLY ***
 def find_similar_papers():
     if vectorstore is None:
         return "Please upload a PDF first."
 
-    docs = vectorstore.similarity_search("summary", k=1)
-    query_text = docs[0].page_content[:1000]  # Shorten if needed
+    try:
+        docs = vectorstore.similarity_search("abstract or introduction", k=3)
 
-    headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY}
-    url = f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_text}&limit=3&fields=title,abstract,url"
-    response = requests.get(url, headers=headers)
+        # Combine chunks and take the first 40 words total
+        combined_text = " ".join([doc.page_content for doc in docs])
+        query_text = " ".join(combined_text.split()[:40])
 
-    if response.status_code != 200:
-        return "Error fetching from Semantic Scholar."
+        # Fallback if query_text is too short or citation-heavy
+        if len(query_text) < 30 or "arXiv" in query_text or "[" in query_text:
+            query_text = "transformer models for abstractive text summarization"
 
-    data = response.json()
-    results = data.get("data", [])
+        encoded_query = urllib.parse.quote(query_text)
 
-    return "\n\n".join([f"**{r['title']}**\n{r['abstract']}\nLink: {r['url']}" for r in results])
+        # Build arXiv API query
+        url = f"http://export.arxiv.org/api/query?search_query=all:{encoded_query}&start=0&max_results=2"
 
-# Gradio UI
+        print("Querying arXiv with:", query_text)
+        print("URL:", url)
+
+        feed = feedparser.parse(url)
+        entries = feed.entries
+
+        if not entries:
+            return f"No similar papers found for query: **{query_text}**"
+
+        results = []
+        for entry in entries:
+            title = entry.title
+            summary = entry.summary.replace('\n', ' ').strip()
+            link = entry.link
+            results.append(f"**{title}**\n{summary}\n🔗 {link}")
+
+        return "\n\n".join(results)
+
+    except Exception as e:
+        return f"Error fetching similar papers: {str(e)}"
+
+
+# Gradio UI and app launching code unchanged...
+
 css = '''
 body, .gradio-container {
   margin: 0; padding: 0; min-height: 100vh;
@@ -273,3 +300,15 @@ with gr.Blocks(css=css) as demo:
 
 if __name__ == "__main__":
     demo.launch()
+
+   
+    
+        
+       
+       
+       
+
+           
+
+
+
