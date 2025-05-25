@@ -17,8 +17,10 @@ import feedparser  # Added for the new function
 
 # Load environment variables
 load_dotenv()
+
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
+
 
 # Custom wrapper for Groq to make it LangChain compatible
 class GroqWrapper(LLM):
@@ -227,72 +229,298 @@ def find_similar_papers():
         return f"Error fetching similar papers: {str(e)}"
 
 
-# Gradio UI and app launching code unchanged...
+
+
+
+
 
 css = '''
+:root {
+    --primary: #6e48aa;
+    --secondary: #9d50bb;
+    --accent: #4776e6;
+    --dark: #1a1a2e;
+    --darker: #16213e;
+    --light: #f8f9fa;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --danger: #f44336;
+}
+
 body, .gradio-container {
-  margin: 0; padding: 0; min-height: 100vh;
-  background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
-  color: #eee;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    background: linear-gradient(135deg, var(--dark), var(--darker));
+    color: var(--light);
+    min-height: 100vh;
 }
+
 .header {
-  width: 100%; padding: 20px; text-align: center;
-  font-size: 2.8rem; font-weight: bold;
-  background: linear-gradient(90deg,#ff8a00,#e52e71);
-  -webkit-background-clip: text; color: transparent;
+    text-align: center;
+    padding: 1.5rem 0;
+    margin-bottom: 2rem;
+    color: white;                      /* Make text white */
+    font-size: 3rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    font-style: italic;               /* Make it italic */
+    text-shadow: 0 2px 10px rgba(0,0,0,0.2);
 }
-.content {
-  display: flex; flex-wrap: wrap; padding: 20px;
-  gap: 20px; justify-content: center;
+
+
+.nav-tabs {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
 }
-.sidebar, .main {
-  background: rgba(255,255,255,0.05);
-  border-radius: 12px; padding: 20px;
-  backdrop-filter: blur(10px);
-  animation: fadeIn 0.8s ease-in-out;
-  max-height: 70vh; overflow-y: auto;
-  flex: 1 1 300px;
+
+.tab-button {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
-.footer {
-  display: flex; flex-wrap: wrap; gap: 20px;
-  padding: 15px; justify-content: center;
+
+.tab-button:hover {
+    background: rgba(255,255,255,0.2);
+    transform: translateY(-2px);
 }
+
+.tab-button.active {
+    background: linear-gradient(45deg, var(--primary), var(--accent));
+    box-shadow: 0 4px 15px rgba(110, 72, 170, 0.4);
+}
+
+.tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.panel {
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    padding: 2rem;
+    margin: 1rem auto;
+    max-width: 900px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.panel-header {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.panel-header svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
 button {
-  transition: transform .15s ease-in-out, box-shadow .15s;
-  padding: 10px 20px;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(110, 72, 170, 0.3);
+    margin: 0.5rem 0;
 }
+
 button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 8px rgba(255,255,255,0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(110, 72, 170, 0.4);
 }
-@keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+button:active {
+    transform: translateY(0);
+}
+
+button.secondary {
+    background: rgba(255,255,255,0.1);
+}
+
+button.secondary:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+textarea, input[type="text"] {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    border-radius: 8px;
+    padding: 0.8rem;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(71, 118, 230, 0.3);
+}
+
+.output-box {
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    border-left: 4px solid var(--accent);
+}
+
+.output-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: block;
+    color: #ddd;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.slide-in {
+    animation: slideIn 0.5s ease-out forwards;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.file-upload {
+    border: 2px dashed rgba(255,255,255,0.3);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.file-upload:hover {
+    border-color: var(--accent);
+    background: rgba(71, 118, 230, 0.1);
+}
+
+.progress-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    width: 0%;
+    transition: width 0.3s ease;
+}
 '''
 
 with gr.Blocks(css=css) as demo:
-    gr.Markdown("<div class='header'>🧠 AI Research Assistant</div>")
+    gr.Markdown("""
+    <div class='header'>
+        <span style="font-size:1.2em">🔬</span> AI Research Companion 
+        <span style="font-size:1.2em">🧠</span>
+    </div>
+    """)
+    
+    with gr.Tabs() as tabs:
+        with gr.TabItem("📄 Upload PDF", id="upload"):
+            with gr.Column(elem_classes=["panel"]):
+                gr.Markdown("""<div class="panel-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    Document Processing
+                </div>""")
+                
+                with gr.Column(elem_classes=["file-upload"]):
+                    file_upload = gr.File(
+                        file_types=['.pdf'], 
+                        label="Drag & Drop PDF or Click to Browse",
+                        elem_classes=["upload-box"]
+                    )
+                    upload_btn = gr.Button("Process Document", variant="primary")
+                    status = gr.Textbox(label="Processing Status", interactive=False)
+                    gr.Markdown("<div class='progress-bar'><div class='progress'></div></div>")
 
-    with gr.Row(elem_classes=["content"]):
-        with gr.Column(elem_classes=["sidebar"]):
-            gr.Markdown("### Upload & Process PDF")
-            file_upload = gr.File(file_types=['.pdf'], label="Upload PDF")
-            upload_btn  = gr.Button("📂 Process PDF", variant="primary")
-            status      = gr.Textbox(label="Status", interactive=False)
+        with gr.TabItem("❓ Ask Questions", id="qa"):
+            with gr.Column(elem_classes=["panel"]):
+                gr.Markdown("""<div class="panel-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Research Q&A
+                </div>""")
+                
+                question = gr.Textbox(
+                    placeholder="Type your research question here...", 
+                    label="Your Question",
+                    lines=3
+                )
+                ask_btn = gr.Button("Get Answer", variant="primary")
+                
+                with gr.Column(elem_classes=["output-box"]):
+                    gr.Markdown("<div class='output-label'>Answer</div>")
+                    answer = gr.Textbox(show_label=False, lines=6, interactive=False)
+                
+                with gr.Column(elem_classes=["output-box"]):
+                    gr.Markdown("<div class='output-label'>Source References</div>")
+                    citations = gr.Textbox(show_label=False, lines=4, interactive=False)
 
-        with gr.Column(elem_classes=["main"]):
-            gr.Markdown("### Ask a Question")
-            question    = gr.Textbox(placeholder="Type your question…", label="Question")
-            ask_btn     = gr.Button("❓ Submit", variant="secondary")
-            answer      = gr.Textbox(label="Answer", lines=6, interactive=False)
-            citations   = gr.Textbox(label="Sources", lines=4, interactive=False)
+        with gr.TabItem("✍️ Summarize", id="summary"):
+            with gr.Column(elem_classes=["panel"]):
+                gr.Markdown("""<div class="panel-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                    Document Summary
+                </div>""")
+                
+                summary_btn = gr.Button("Generate Summary", variant="primary")
+                
+                with gr.Column(elem_classes=["output-box"]):
+                    gr.Markdown("<div class='output-label'>Key Insights</div>")
+                    summary_output = gr.Textbox(show_label=False, lines=8, interactive=False)
 
-    with gr.Row(elem_classes=["footer"]):
-        with gr.Column():
-            summary_btn    = gr.Button("✍️ Summarize", variant="primary")
-            summary_output = gr.Textbox(label="Summary", lines=4, interactive=False)
-        with gr.Column():
-            similar_btn    = gr.Button("🔍 Similar Papers", variant="primary")
-            similar_output = gr.Textbox(label="Similar Papers", lines=4, interactive=False)
+        with gr.TabItem("🔍 Similar Papers", id="papers"):
+            with gr.Column(elem_classes=["panel"]):
+                gr.Markdown("""<div class="panel-header">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Related Research
+                </div>""")
+                
+                similar_btn = gr.Button("Find Similar Papers", variant="primary")
+                
+                with gr.Column(elem_classes=["output-box"]):
+                    gr.Markdown("<div class='output-label'>Recommended Papers</div>")
+                    similar_output = gr.Textbox(show_label=False, lines=8, interactive=False)
 
+    # Event handlers
     upload_btn.click(upload_pdf, inputs=file_upload, outputs=status)
     ask_btn.click(ask_question, inputs=question, outputs=[answer, citations])
     summary_btn.click(summarize_pdf, outputs=summary_output)
@@ -300,13 +528,6 @@ with gr.Blocks(css=css) as demo:
 
 if __name__ == "__main__":
     demo.launch()
-
-   
-    
-        
-       
-       
-       
 
            
 
