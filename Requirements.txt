@@ -12,3 +12,4 @@ sentence-transformers
 torch
 huggingface-hub
 tqdm
+feedparser
