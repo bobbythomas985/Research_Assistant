@@ -21,7 +21,7 @@ SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
 # Custom wrapper for Groq to make it LangChain compatible
 class GroqWrapper(LLM):
     client: Any
-    model_name: str = "mixtral-8x7b-32768"
+    model_name: str = "llama-3.3-70b-versatile"
     temperature: float = 0.7
     
     @property
@@ -101,22 +101,51 @@ def ask_question(query):
     source_text = "\n\n".join([f"---\n{doc.page_content[:500]}..." for doc in sources])
     return answer, source_text or "No sources found."
 
-def summarize_pdf():
+def summarize_pdf(num_points: int = 6) -> str:
+    """
+    Summarizes the uploaded PDF using the Groq LLM with a creative prompt.
+    
+    Args:
+        num_points (int): Number of bullet points for the summary (default: 6).
+    
+    Returns:
+        str: The summary or an error message.
+    """
+    global vectorstore, groq_llm
+
     if vectorstore is None:
         return "Please upload a PDF first."
 
-    docs = vectorstore.similarity_search("summary", k=5)
-    context = "\n\n".join([doc.page_content for doc in docs])
+    try:
+        docs = vectorstore.similarity_search("summary", k=5)
+        if not docs:
+            return "No content found to summarize."
 
-    prompt = PromptTemplate.from_template("""
-    You are an AI assistant that summarizes academic papers.
-    Summarize the following paper content in 5-7 bullet points:
-    {context}
-    """)
+        context = "\n\n".join([doc.page_content for doc in docs])
 
-    llm = Groq(model="mixtral-8x7b-32768", api_key=GROQ_API_KEY)
-    chain = prompt | llm
-    return chain.invoke({"context": context})
+        prompt = (
+            "Imagine you are a passionate science communicator tasked with revealing the essence of a groundbreaking research paper.\n"
+            f"Craft a captivating summary in {num_points} vivid bullet points that not only highlights the core discoveries but also paints a clear picture of their significance.\n"
+            "Make it engaging, insightful, and accessible to a curious reader eager to grasp the impact of this work.\n\n"
+            f"Here is the paper content:\n{context}\n\n"
+            "Your inspired summary:"
+        )
+
+        if groq_llm is None:
+            from groq import Groq
+            groq_llm = GroqWrapper(
+                client=Groq(
+                    api_key=os.getenv("GROQ_API_KEY"),
+                    model="llama-3.3-70b-versatile"
+                ),
+                model_name="llama-3.3-70b-versatile"
+            )
+
+        summary = groq_llm(prompt)
+        return summary.strip()
+    
+    except Exception as e:
+        return f"Error during summarization: {str(e)}"
 
 def find_similar_papers():
     if vectorstore is None:
