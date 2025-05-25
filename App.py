@@ -88,18 +88,53 @@ def upload_pdf(file):
     except Exception as e:
         return f"Error: {str(e)}"
 
-
-
 def ask_question(query):
+    global qa_chain
+    
     if qa_chain is None:
         return "Please upload a PDF first.", ""
 
-    result = qa_chain(query, return_only_outputs=False)
-    answer = result["result"]
-    sources = result["source_documents"]
-
-    source_text = "\n\n".join([f"---\n{doc.page_content[:500]}..." for doc in sources])
-    return answer, source_text or "No sources found."
+    try:
+        # Create a custom prompt template for better answers
+        prompt_template = """Use the following pieces of context to answer the question at the end. 
+        If you don't know the answer, just say that you don't know, don't try to make up an answer.
+        Provide a detailed, accurate response with proper formatting.
+        
+        Context:
+        {context}
+        
+        Question: {question}
+        
+        Helpful Answer:"""
+        
+        custom_prompt = PromptTemplate(
+            template=prompt_template,
+            input_variables=["context", "question"]
+        )
+        
+        # Configure the QA chain with our custom prompt
+        qa_chain.combine_documents_chain.llm_chain.prompt = custom_prompt
+        
+        # Execute the query
+        result = qa_chain({"query": query}, return_only_outputs=False)
+        
+        # Extract answer and sources
+        answer = result["result"]
+        sources = result.get("source_documents", [])
+        
+        # Format the sources for display
+        if sources:
+            source_text = "\n\n---\n".join([
+                f"Source {i+1}:\n{doc.page_content[:500]}{'...' if len(doc.page_content) > 500 else ''}"
+                for i, doc in enumerate(sources)
+            ])
+        else:
+            source_text = "No sources cited"
+            
+        return answer, source_text
+    
+    except Exception as e:
+        return f"Error processing your question: {str(e)}", ""
 
 def summarize_pdf(num_points: int = 6) -> str:
     """
