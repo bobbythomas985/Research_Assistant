@@ -84,7 +84,7 @@ python app.py
 ## 🔮 Future Improvements
 
 - 📚 **Multi-document support** – Build a single knowledge base from multiple PDFs  
-- 🧠 **LLM Reranking** – Use cross-encoder reranking for better context selection  
+- 📷 **LLM Reranking** – Use cross-encoder reranking for better context selection  
 - 📑 **Clickable Source References** – Jump directly to relevant sections inside the PDF  
 - 🚀 **Deploy on Hugging Face Spaces / Streamlit Cloud** – Make it public and shareable  
 - 🌍 **Multilingual Q&A** – Integrate translation for global research accessibility
